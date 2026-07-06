@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#F2F2F7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<meta name="description" content="Registra tu progreso físico, tus hábitos y mantén tu racha diaria. Funciona sin conexión.">
+<link rel="manifest" href="manifest.json">
+<!-- iOS / Safari -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Mi Progreso">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<!-- Favicons -->
+<link rel="icon" type="image/svg+xml" href="icons/favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<title>Mi Progreso</title>
+<style>
+  :root{
+    --bg:#F2F2F7; --card:#FFFFFF; --card2:#FFFFFF;
+    --ink:#1C1C1E; --ink2:#8E8E93; --ink3:#C7C7CC;
+    --sep:rgba(60,60,67,0.10);
+    --blue:#007AFF; --green:#34C759; --orange:#FF9500; --red:#FF3B30; --yellow:#FFCC00;
+    --flameA:#FFB020; --flameB:#FF7A00; --flameC:#FF3B30;
+    --shadow:0 1px 2px rgba(0,0,0,.04), 0 6px 20px rgba(0,0,0,.06);
+    --tabbar:rgba(249,249,249,.82);
+    --fieldbg:#F2F2F7;
+    --font:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Segoe UI",system-ui,sans-serif;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#000000; --card:#1C1C1E; --card2:#2C2C2E;
+      --ink:#FFFFFF; --ink2:#98989F; --ink3:#48484A;
+      --sep:rgba(84,84,88,0.34);
+      --blue:#0A84FF; --green:#30D158; --orange:#FF9F0A; --red:#FF453A; --yellow:#FFD60A;
+      --shadow:0 1px 2px rgba(0,0,0,.5), 0 8px 24px rgba(0,0,0,.4);
+      --tabbar:rgba(22,22,24,.82);
+      --fieldbg:#2C2C2E;
+    }
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:var(--font); background:var(--bg); color:var(--ink);
+    -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+    display:flex; justify-content:center; min-height:100vh;
+  }
+  #app{width:100%; max-width:440px; min-height:100vh; position:relative; overflow:hidden; background:var(--bg)}
+  .screen{display:none; padding:0 18px calc(96px + env(safe-area-inset-bottom)); animation:fade .35s ease}
+  .screen.active{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+  /* header */
+  .top{padding:calc(14px + env(safe-area-inset-top)) 0 6px}
+  .eyebrow{font-size:15px;color:var(--ink2);font-weight:600;letter-spacing:.2px}
+  .largeTitle{font-size:34px;font-weight:800;letter-spacing:-.6px;margin:2px 0 12px;line-height:1.05}
+
+  .card{background:var(--card);border-radius:22px;box-shadow:var(--shadow);padding:18px}
+  .card + .card{margin-top:14px}
+  .sectionLabel{font-size:13px;font-weight:700;color:var(--ink2);text-transform:uppercase;letter-spacing:.6px;margin:22px 4px 8px}
+
+  /* streak card */
+  .streakCard{background:var(--card);border-radius:26px;box-shadow:var(--shadow);padding:22px 18px 18px;text-align:center;position:relative;overflow:hidden}
+  .flameWrap{position:relative;display:inline-flex;flex-direction:column;align-items:center;margin-top:2px}
+  .flame{width:104px;height:120px;filter:drop-shadow(0 8px 16px rgba(255,90,0,.35))}
+  .flame.animate{animation:flicker 2.6s ease-in-out infinite}
+  @keyframes flicker{0%,100%{transform:scale(1) rotate(-.5deg)}50%{transform:scale(1.035) rotate(.5deg)}}
+  .streakNum{position:absolute;top:52%;left:0;right:0;transform:translateY(-50%);font-size:44px;font-weight:800;color:#fff;text-shadow:0 1px 4px rgba(180,50,0,.55);letter-spacing:-1px}
+  .streakLabel{font-size:19px;font-weight:700;margin-top:8px}
+  .streakSub{font-size:14px;color:var(--ink2);margin-top:2px}
+  .pop{animation:pop .5s cubic-bezier(.2,1.4,.4,1)}
+  @keyframes pop{0%{transform:scale(1)}40%{transform:scale(1.18)}100%{transform:scale(1)}}
+
+  .week{display:flex;justify-content:space-between;gap:6px;margin-top:18px}
+  .day{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px}
+  .dayL{font-size:11px;font-weight:700;color:var(--ink2)}
+  .dot{width:30px;height:30px;border-radius:50%;background:var(--fieldbg);display:flex;align-items:center;justify-content:center;font-size:14px;color:var(--ink3);transition:transform .2s}
+  .dot.done{background:linear-gradient(160deg,var(--flameA),var(--flameB));color:#fff;box-shadow:0 3px 8px rgba(255,120,0,.35)}
+  .dot.today{outline:2.5px solid var(--blue);outline-offset:2px}
+  .dot.future{opacity:.55}
+
+  /* buttons */
+  .btn{width:100%;border:none;border-radius:16px;padding:16px;font-family:var(--font);font-size:17px;font-weight:700;cursor:pointer;transition:transform .12s ease,opacity .2s,background .2s}
+  .btn:active{transform:scale(.975)}
+  .btn.primary{background:var(--blue);color:#fff;margin-top:16px}
+  .btn.flameBtn{background:linear-gradient(135deg,var(--flameB),var(--flameC));color:#fff;margin-top:16px;box-shadow:0 6px 18px rgba(255,80,0,.35)}
+  .btn.done{background:var(--green);color:#fff}
+  .btn.ghost{background:var(--fieldbg);color:var(--blue);font-weight:600}
+  .btn.danger{background:var(--fieldbg);color:var(--red);font-weight:600}
+
+  /* quick log grid */
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .tile{background:var(--card);border-radius:20px;box-shadow:var(--shadow);padding:16px;cursor:pointer;transition:transform .12s}
+  .tile:active{transform:scale(.97)}
+  .tileTop{display:flex;align-items:center;gap:8px;color:var(--ink2);font-size:14px;font-weight:600}
+  .tileIcon{width:26px;height:26px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:15px}
+  .tileVal{font-size:26px;font-weight:800;margin-top:10px;letter-spacing:-.5px}
+  .tileUnit{font-size:14px;font-weight:600;color:var(--ink2);margin-left:3px}
+
+  /* habits */
+  .habit{display:flex;align-items:center;gap:13px;padding:13px 4px;cursor:pointer}
+  .habit + .habit{border-top:.5px solid var(--sep)}
+  .hIcon{width:34px;height:34px;border-radius:11px;background:var(--fieldbg);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+  .hLabel{flex:1;font-size:17px;font-weight:600}
+  .check{width:28px;height:28px;border-radius:50%;border:2px solid var(--ink3);flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .2s}
+  .check.on{background:var(--green);border-color:var(--green)}
+  .check svg{width:16px;height:16px;opacity:0;transform:scale(.5);transition:all .2s}
+  .check.on svg{opacity:1;transform:scale(1)}
+  .habitCount{font-size:13px;color:var(--ink2);font-weight:600;margin:2px 4px 0}
+
+  /* progress ring + stats */
+  .ringWrap{display:flex;flex-direction:column;align-items:center;padding:6px 0 2px}
+  .ring{position:relative;width:190px;height:190px}
+  .ringCenter{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .ringPct{font-size:15px;font-weight:700;color:var(--green)}
+  .ringW{font-size:40px;font-weight:800;letter-spacing:-1px;line-height:1}
+  .ringWl{font-size:14px;color:var(--ink2);font-weight:600;margin-top:3px}
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin-top:6px}
+  .stat{text-align:center;padding:8px 2px;position:relative}
+  .stat + .stat::before{content:"";position:absolute;left:0;top:20%;height:60%;width:.5px;background:var(--sep)}
+  .statV{font-size:20px;font-weight:800;letter-spacing:-.4px}
+  .statL{font-size:12px;color:var(--ink2);font-weight:600;margin-top:3px}
+  .statV.g{color:var(--green)} .statV.b{color:var(--blue)}
+
+  .chartHead{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
+  .chartTitle{font-size:17px;font-weight:700}
+  .chartHint{font-size:13px;color:var(--ink2);font-weight:600}
+  .empty{color:var(--ink2);font-size:15px;text-align:center;padding:26px 10px;font-weight:500}
+
+  /* racha screen */
+  .freezeRow{display:flex;gap:8px;justify-content:center;margin-top:14px}
+  .freeze{background:var(--fieldbg);border-radius:14px;padding:8px 14px;font-size:15px;font-weight:700;display:flex;align-items:center;gap:6px}
+  .cal{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-top:6px}
+  .calH{font-size:11px;font-weight:700;color:var(--ink2);text-align:center;padding-bottom:2px}
+  .calD{aspect-ratio:1;border-radius:10px;background:var(--fieldbg);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:var(--ink2)}
+  .calD.done{background:linear-gradient(160deg,var(--flameA),var(--flameB));color:#fff}
+  .calD.today{outline:2px solid var(--blue);outline-offset:1px;color:var(--ink)}
+  .calD.blank{background:transparent}
+
+  .row{display:flex;align-items:center;justify-content:space-between;padding:14px 2px}
+  .row + .row{border-top:.5px solid var(--sep)}
+  .rowL{font-size:17px;font-weight:600}
+  .rowV{font-size:17px;color:var(--ink2);font-weight:600}
+  input.inl{border:none;background:transparent;font-family:var(--font);font-size:17px;font-weight:700;color:var(--blue);text-align:right;width:90px;outline:none}
+
+  /* tab bar */
+  .tabbar{position:fixed;bottom:0;left:0;right:0;margin:0 auto;max-width:440px;display:flex;
+    background:var(--tabbar);backdrop-filter:saturate(180%) blur(22px);-webkit-backdrop-filter:saturate(180%) blur(22px);
+    border-top:.5px solid var(--sep);padding:8px 0 calc(6px + env(safe-area-inset-bottom));z-index:50}
+  .tab{flex:1;background:none;border:none;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;color:var(--ink2);font-family:var(--font)}
+  .tab svg{width:26px;height:26px}
+  .tab span{font-size:10px;font-weight:600}
+  .tab.on{color:var(--blue)}
+
+  /* sheet / modal */
+  .scrim{position:fixed;inset:0;background:rgba(0,0,0,.4);opacity:0;pointer-events:none;transition:opacity .25s;z-index:60}
+  .scrim.show{opacity:1;pointer-events:auto}
+  .sheet{position:fixed;left:0;right:0;bottom:0;margin:0 auto;max-width:440px;background:var(--card);
+    border-radius:24px 24px 0 0;padding:10px 20px calc(24px + env(safe-area-inset-bottom));z-index:61;
+    transform:translateY(102%);transition:transform .32s cubic-bezier(.2,.9,.3,1)}
+  .sheet.show{transform:translateY(0)}
+  .grab{width:38px;height:5px;border-radius:3px;background:var(--ink3);margin:6px auto 12px}
+  .sheetTitle{font-size:20px;font-weight:800;text-align:center;margin-bottom:2px}
+  .sheetSub{font-size:14px;color:var(--ink2);text-align:center;margin-bottom:16px}
+  .stepper{display:flex;align-items:center;justify-content:center;gap:18px;margin:8px 0 18px}
+  .stepBtn{width:52px;height:52px;border-radius:50%;border:none;background:var(--fieldbg);color:var(--blue);font-size:28px;font-weight:600;cursor:pointer;line-height:1;transition:transform .1s}
+  .stepBtn:active{transform:scale(.9)}
+  .stepVal{min-width:120px;text-align:center;font-size:44px;font-weight:800;letter-spacing:-1px}
+  .stepVal input{width:130px;border:none;background:transparent;text-align:center;font-family:var(--font);font-size:44px;font-weight:800;color:var(--ink);outline:none;letter-spacing:-1px}
+  .stepUnit{font-size:18px;color:var(--ink2);font-weight:700;margin-left:4px}
+
+  .toast{position:fixed;top:calc(18px + env(safe-area-inset-top));left:0;right:0;margin:0 auto;max-width:360px;
+    background:var(--ink);color:var(--bg);padding:13px 20px;border-radius:16px;text-align:center;font-weight:700;font-size:15px;
+    box-shadow:0 10px 30px rgba(0,0,0,.3);transform:translateY(-140%);transition:transform .4s cubic-bezier(.2,1.2,.3,1);z-index:70;width:calc(100% - 36px)}
+  .toast.show{transform:translateY(0)}
+
+  @media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- HOY -->
+  <section class="screen active" id="s-hoy">
+    <div class="top"><div class="eyebrow" id="greet">Hola</div><div class="largeTitle">Hoy</div></div>
+    <div class="streakCard">
+      <div class="flameWrap">
+        <svg class="flame animate" id="flame" viewBox="0 0 100 120" aria-hidden="true">
+          <defs>
+            <linearGradient id="fg" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="var(--flameA)"/>
+              <stop offset="55%" stop-color="var(--flameB)"/>
+              <stop offset="100%" stop-color="var(--flameC)"/>
+            </linearGradient>
+          </defs>
+          <path fill="url(#fg)" d="M50 4c6 20 26 28 26 52 0 21-12 34-26 34S24 77 24 56c0-9 4-15 9-19-1 9 3 15 8 16-6-14 4-30 9-49z"/>
+          <path fill="#FFD98A" opacity=".9" d="M50 58c3 9 11 12 11 23 0 9-5 15-11 15s-11-6-11-15c0-6 3-9 6-12-.4 4 1.4 7 3.5 7.6C55 68 48 63 50 58z"/>
+        </svg>
+        <div class="streakNum" id="streakNum">0</div>
+      </div>
+      <div class="streakLabel" id="streakLabel">días de racha</div>
+      <div class="streakSub" id="streakSub">Empieza hoy 🔥</div>
+      <div class="week" id="week"></div>
+    </div>
+    <button class="btn flameBtn" id="completeBtn" onclick="completeDay()">Completar hoy</button>
+
+    <div class="sectionLabel">Registro rápido</div>
+    <div class="grid2">
+      <div class="tile" onclick="editMetric('weight')">
+        <div class="tileTop"><span class="tileIcon" style="background:#EAF3FF;color:#007AFF">⚖️</span>Peso</div>
+        <div><span class="tileVal" id="t-weight">—</span><span class="tileUnit">kg</span></div>
+      </div>
+      <div class="tile" onclick="editMetric('water')">
+        <div class="tileTop"><span class="tileIcon" style="background:#E9F7FF;color:#32ADE6">💧</span>Agua</div>
+        <div><span class="tileVal" id="t-water">—</span><span class="tileUnit">L</span></div>
+      </div>
+      <div class="tile" onclick="editMetric('sleep')">
+        <div class="tileTop"><span class="tileIcon" style="background:#EFEBFF;color:#5E5CE6">😴</span>Sueño</div>
+        <div><span class="tileVal" id="t-sleep">—</span><span class="tileUnit">h</span></div>
+      </div>
+      <div class="tile" onclick="editMetric('steps')">
+        <div class="tileTop"><span class="tileIcon" style="background:#EAFBEF;color:#34C759">👟</span>Pasos</div>
+        <div><span class="tileVal" id="t-steps">—</span></div>
+      </div>
+    </div>
+
+    <div class="sectionLabel">Hábitos del día</div>
+    <div class="card">
+      <div class="habitCount" id="habitCount">0 de 5 completados</div>
+      <div id="habits"></div>
+    </div>
+  </section>
+
+  <!-- PROGRESO -->
+  <section class="screen" id="s-progreso">
+    <div class="top"><div class="eyebrow">Camino a 75 kg</div><div class="largeTitle">Progreso</div></div>
+    <div class="card">
+      <div class="ringWrap">
+        <div class="ring">
+          <svg width="190" height="190" viewBox="0 0 190 190">
+            <circle cx="95" cy="95" r="82" fill="none" stroke="var(--fieldbg)" stroke-width="16"/>
+            <circle id="ringArc" cx="95" cy="95" r="82" fill="none" stroke="var(--green)" stroke-width="16"
+              stroke-linecap="round" transform="rotate(-90 95 95)" stroke-dasharray="515" stroke-dashoffset="515"
+              style="transition:stroke-dashoffset .8s cubic-bezier(.3,1,.4,1)"/>
+          </svg>
+          <div class="ringCenter">
+            <div class="ringPct" id="ringPct">0%</div>
+            <div class="ringW" id="ringW">—</div>
+            <div class="ringWl">kg actual</div>
+          </div>
+        </div>
+      </div>
+      <div class="stats">
+        <div class="stat"><div class="statV" id="st-ini">—</div><div class="statL">Inicial</div></div>
+        <div class="stat"><div class="statV g" id="st-lost">—</div><div class="statL">Perdido</div></div>
+        <div class="stat"><div class="statV b" id="st-left">—</div><div class="statL">Restante</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="chartHead"><div class="chartTitle">Peso</div><div class="chartHint" id="chartHint">Últimos registros</div></div>
+      <div id="chartBox"></div>
+    </div>
+  </section>
+
+  <!-- RACHA -->
+  <section class="screen" id="s-racha">
+    <div class="top"><div class="eyebrow">Constancia &gt; perfección</div><div class="largeTitle">Racha</div></div>
+    <div class="streakCard">
+      <div class="flameWrap">
+        <svg class="flame" viewBox="0 0 100 120" aria-hidden="true">
+          <path fill="url(#fg)" d="M50 4c6 20 26 28 26 52 0 21-12 34-26 34S24 77 24 56c0-9 4-15 9-19-1 9 3 15 8 16-6-14 4-30 9-49z"/>
+        </svg>
+        <div class="streakNum" id="streakNum2">0</div>
+      </div>
+      <div class="streakLabel"><span id="streakBig">0</span> días seguidos</div>
+      <div class="freezeRow">
+        <div class="freeze">🏆 Récord: <span id="record">0</span></div>
+        <div class="freeze">❄️ Escudos: <span id="freezes">0</span></div>
+      </div>
+    </div>
+    <div class="sectionLabel" id="calTitle">Este mes</div>
+    <div class="card">
+      <div class="cal" id="calHead"></div>
+      <div class="cal" id="cal" style="margin-top:6px"></div>
+    </div>
+    <div class="card" style="margin-top:14px">
+      <div style="font-size:15px;font-weight:600;line-height:1.5" id="rachaMsg"></div>
+    </div>
+  </section>
+
+  <!-- AJUSTES -->
+  <section class="screen" id="s-ajustes">
+    <div class="top"><div class="eyebrow">Tu plan</div><div class="largeTitle">Ajustes</div></div>
+    <div class="sectionLabel">Perfil</div>
+    <div class="card">
+      <div class="row"><div class="rowL">Nombre</div><input class="inl" id="in-name" placeholder="Tu nombre" onchange="saveProfileField('name',this.value)"></div>
+      <div class="row"><div class="rowL">Peso inicial</div><div><input class="inl" id="in-start" type="number" step="0.1" inputmode="decimal" onchange="saveProfileField('startWeight',this.value)"><span class="rowV"> kg</span></div></div>
+      <div class="row"><div class="rowL">Peso objetivo</div><div><input class="inl" id="in-goal" type="number" step="0.1" inputmode="decimal" onchange="saveProfileField('goalWeight',this.value)"><span class="rowV"> kg</span></div></div>
+    </div>
+    <div class="sectionLabel">Instalación</div>
+    <div class="card">
+      <div style="font-size:14px;color:var(--ink2);line-height:1.5;margin-bottom:14px" id="installHint">Instálala en tu pantalla de inicio para abrirla a pantalla completa, como una app nativa.</div>
+      <button class="btn primary" id="installBtn" onclick="installApp()">Instalar app</button>
+    </div>
+    <div class="sectionLabel">Datos</div>
+    <div class="card">
+      <div style="font-size:14px;color:var(--ink2);line-height:1.5;margin-bottom:14px">
+        Tu progreso se guarda automáticamente en este dispositivo y sigue aquí la próxima vez que abras la app.
+      </div>
+      <button class="btn danger" onclick="resetAll()">Borrar todos los datos</button>
+    </div>
+    <div style="text-align:center;color:var(--ink3);font-size:12px;margin-top:22px">Mi Progreso · hecho para tu transformación</div>
+  </section>
+
+  <!-- TAB BAR -->
+  <nav class="tabbar">
+    <button class="tab on" data-t="hoy" onclick="go('hoy')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9"/></svg>
+      <span>Hoy</span>
+    </button>
+    <button class="tab" data-t="progreso" onclick="go('progreso')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 19V5"/><path d="M4 19h16"/><path d="M7 15l4-5 3 3 5-7"/></svg>
+      <span>Progreso</span>
+    </button>
+    <button class="tab" data-t="racha" onclick="go('racha')">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c1.5 5 6.5 7 6.5 13 0 4.7-3 7-6.5 7s-6.5-2.3-6.5-7c0-2.2 1-3.7 2.2-4.7-.3 2.3.8 3.7 2 4-1.5-3.5 1-7.5 2.3-12.3z"/></svg>
+      <span>Racha</span>
+    </button>
+    <button class="tab" data-t="ajustes" onclick="go('ajustes')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="12" r="3.2"/><path d="M19 12a7 7 0 0 0-.1-1.3l2-1.6-2-3.4-2.4 1a7 7 0 0 0-2.2-1.3L14 1h-4l-.3 2.1a7 7 0 0 0-2.2 1.3l-2.4-1-2 3.4 2 1.6A7 7 0 0 0 5 12a7 7 0 0 0 .1 1.3l-2 1.6 2 3.4 2.4-1a7 7 0 0 0 2.2 1.3L10 23h4l.3-2.1a7 7 0 0 0 2.2-1.3l2.4 1 2-3.4-2-1.6A7 7 0 0 0 19 12z"/></svg>
+      <span>Ajustes</span>
+    </button>
+  </nav>
+</div>
+
+<div class="scrim" id="scrim" onclick="closeSheet()"></div>
+<div class="sheet" id="sheet">
+  <div class="grab"></div>
+  <div class="sheetTitle" id="sheetTitle"></div>
+  <div class="sheetSub" id="sheetSub"></div>
+  <div class="stepper">
+    <button class="stepBtn" onclick="stepVal(-1)">−</button>
+    <div class="stepVal"><input id="stepInput" type="number" inputmode="decimal"><span class="stepUnit" id="stepUnit"></span></div>
+    <button class="stepBtn" onclick="stepVal(1)">+</button>
+  </div>
+  <button class="btn primary" onclick="saveSheet()">Guardar</button>
+  <button class="btn ghost" style="margin-top:8px" onclick="closeSheet()">Cancelar</button>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+/* ---------- almacenamiento persistente (con respaldo en memoria) ---------- */
+const mem = {};
+function lsGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
+function lsSet(k,v){ try{ localStorage.setItem(k,v); return true; }catch(e){ return false; } }
+const store = {
+  async get(key, def){
+    let raw = lsGet(key);                                   // 1) localStorage (persistente en cualquier navegador)
+    if(raw==null && window.storage){                        // 2) compat. con el visor de Claude
+      try{ const r = await window.storage.get(key); if(r && r.value!=null) raw = r.value; }catch(e){}
+    }
+    if(raw!=null){ try{ return JSON.parse(raw); }catch(e){} }
+    return (key in mem) ? mem[key] : def;                   // 3) respaldo en memoria
+  },
+  async set(key, val){
+    mem[key] = val;
+    const s = JSON.stringify(val);
+    lsSet(key, s);
+    try{ if(window.storage) await window.storage.set(key, s); }catch(e){}
+  }
+};
+
+/* ---------- estado ---------- */
+let S = {
+  profile:{ name:"", startWeight:87, goalWeight:75, startDate:todayStr() },
+  logs:{},                              // 'YYYY-MM-DD' -> {weight,water,sleep,steps,habits:{},done}
+  streak:{ current:0, record:0, lastDone:null, freezes:2 }
+};
+const HABITS = [
+  {key:"entreno", label:"Entrené", icon:"🏋️"},
+  {key:"proteina",label:"Proteína OK", icon:"🍗"},
+  {key:"pasos",   label:"8.000 pasos", icon:"👟"},
+  {key:"agua",    label:"Bebí suficiente agua", icon:"💧"},
+  {key:"sueno",   label:"Dormí 7 h o más", icon:"😴"}
+];
+
+/* ---------- utilidades de fecha ---------- */
+function todayStr(){ return toStr(new Date()); }
+function toStr(d){ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+function parse(s){ const p=s.split("-"); return new Date(+p[0],+p[1]-1,+p[2]); }
+function diffDays(a,b){ return Math.round((parse(a)-parse(b))/86400000); } // a - b en días
+function addDays(s,n){ const d=parse(s); d.setDate(d.getDate()+n); return toStr(d); }
+function fmt(n,d=1){ if(n==null||isNaN(n)) return "—"; return Number(n).toFixed(d).replace(/\.0$/,"").replace(".",","); }
+
+/* ---------- carga ---------- */
+async function load(){
+  S.profile = await store.get("ap:profile", S.profile);
+  S.logs    = await store.get("ap:logs", {});
+  S.streak  = await store.get("ap:streak", S.streak);
+  if(!S.streak.freezes && S.streak.freezes!==0) S.streak.freezes = 2;
+  reconcileStreak();
+  hydrateAjustes();
+  renderAll();
+}
+
+/* Reconciliar la racha al abrir: días perdidos consumen escudos ❄️; si no alcanzan, se reinicia. */
+function reconcileStreak(){
+  const st = S.streak, t = todayStr();
+  if(!st.lastDone){ st.current = 0; return; }
+  const gap = diffDays(t, st.lastDone);
+  if(gap <= 1) return;                 // hoy o ayer: la racha sigue viva
+  const missed = gap - 1;
+  if(st.freezes >= missed){
+    st.freezes -= missed;
+    st.lastDone = addDays(t, -1);      // escudos cubren los días: lista para continuar hoy
+  } else {
+    st.current = 0;                    // racha perdida
+  }
+  store.set("ap:streak", st);
+}
+
+function log(date){ if(!S.logs[date]) S.logs[date] = {habits:{}}; if(!S.logs[date].habits) S.logs[date].habits={}; return S.logs[date]; }
+function latestWeight(){
+  const ds = Object.keys(S.logs).filter(d=>S.logs[d].weight!=null).sort();
+  return ds.length ? S.logs[ds[ds.length-1]].weight : null;
+}
+
+/* ---------- navegación ---------- */
+function go(t){
+  document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
+  document.getElementById("s-"+t).classList.add("active");
+  document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("on", b.dataset.t===t));
+  if(t==="progreso") renderProgreso();
+  if(t==="racha") renderRacha();
+  window.scrollTo(0,0);
+}
+
+/* ---------- completar día (motor de la racha) ---------- */
+function completeDay(){
+  const t = todayStr(), st = S.streak;
+  if(st.lastDone === t){ toast("Ya completaste hoy ✅"); return; }
+  if(!st.lastDone){ st.current = 1; }
+  else{
+    const gap = diffDays(t, st.lastDone);
+    if(gap === 1) st.current += 1;
+    else{
+      const missed = gap - 1;
+      if(st.freezes >= missed){ st.freezes -= missed; st.current += 1; }
+      else st.current = 1;
+    }
+  }
+  st.lastDone = t;
+  if(st.current > st.record) st.record = st.current;
+  if(st.current % 10 === 0 && st.freezes < 3){ st.freezes++; toast("¡"+st.current+" días! Ganaste un escudo ❄️"); }
+  else toast("¡Racha "+st.current+"! 🔥");
+  log(t).done = true;
+  store.set("ap:streak", st); store.set("ap:logs", S.logs);
+  const fl = document.getElementById("flame"); fl.classList.remove("pop"); void fl.offsetWidth; fl.classList.add("pop");
+  renderAll();
+}
+
+/* ---------- render ---------- */
+function renderAll(){ renderHoy(); if(document.getElementById("s-progreso").classList.contains("active")) renderProgreso(); if(document.getElementById("s-racha").classList.contains("active")) renderRacha(); }
+
+function renderHoy(){
+  const h = new Date().getHours();
+  const saludo = h<12?"Buenos días":h<20?"Buenas tardes":"Buenas noches";
+  document.getElementById("greet").textContent = saludo + (S.profile.name?(", "+S.profile.name):"");
+  const st = S.streak;
+  document.getElementById("streakNum").textContent = st.current;
+  document.getElementById("streakNum2").textContent = st.current;
+  document.getElementById("streakLabel").textContent = st.current===1?"día de racha":"días de racha";
+  const doneToday = st.lastDone === todayStr();
+  document.getElementById("streakSub").textContent = doneToday ? "¡Hoy completado! Vuelve mañana 🔥" : (st.current>0?"No rompas la cadena":"Empieza hoy 🔥");
+  const btn = document.getElementById("completeBtn");
+  if(doneToday){ btn.textContent = "¡Día completado!"; btn.className="btn done"; }
+  else { btn.textContent = "Completar hoy"; btn.className="btn flameBtn"; }
+
+  // semana Lun-Dom
+  const days=["L","M","X","J","V","S","D"];
+  const t = new Date(); const dow=(t.getDay()+6)%7; // 0=Lun
+  const monday = addDays(todayStr(), -dow);
+  let wk="";
+  for(let i=0;i<7;i++){
+    const ds = addDays(monday,i);
+    const isToday = ds===todayStr();
+    const done = S.logs[ds] && S.logs[ds].done;
+    const future = diffDays(ds,todayStr())>0;
+    let cls="dot"+(done?" done":"")+(isToday?" today":"")+(future?" future":"");
+    wk += '<div class="day"><span class="dayL">'+days[i]+'</span><div class="'+cls+'">'+(done?"🔥":"")+'</div></div>';
+  }
+  document.getElementById("week").innerHTML = wk;
+
+  // tiles
+  const L = log(todayStr());
+  document.getElementById("t-weight").textContent = L.weight!=null?fmt(L.weight):"—";
+  document.getElementById("t-water").textContent  = L.water!=null?fmt(L.water):"—";
+  document.getElementById("t-sleep").textContent  = L.sleep!=null?fmt(L.sleep):"—";
+  document.getElementById("t-steps").textContent  = L.steps!=null?Number(L.steps).toLocaleString("es-AR"):"—";
+
+  // hábitos
+  let hh=""; let count=0;
+  HABITS.forEach(H=>{
+    const on = !!(L.habits && L.habits[H.key]); if(on) count++;
+    hh += '<div class="habit" onclick="toggleHabit(\''+H.key+'\')"><div class="hIcon">'+H.icon+'</div>'+
+          '<div class="hLabel">'+H.label+'</div>'+
+          '<div class="check'+(on?" on":"")+'"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg></div></div>';
+  });
+  document.getElementById("habits").innerHTML = hh;
+  document.getElementById("habitCount").textContent = count+" de "+HABITS.length+" completados";
+}
+
+function toggleHabit(key){
+  const L = log(todayStr());
+  L.habits[key] = !L.habits[key];
+  store.set("ap:logs", S.logs);
+  renderHoy();
+}
+
+function renderProgreso(){
+  const start = +S.profile.startWeight, goal = +S.profile.goalWeight;
+  const cur = latestWeight()!=null ? +latestWeight() : start;
+  const lost = start - cur;
+  const left = cur - goal;
+  let pct = (start-goal)!==0 ? (start-cur)/(start-goal) : 0;
+  pct = Math.max(0, Math.min(1, pct));
+  const arc = document.getElementById("ringArc");
+  const C = 2*Math.PI*82;
+  arc.setAttribute("stroke-dasharray", C.toFixed(1));
+  arc.setAttribute("stroke-dashoffset", (C*(1-pct)).toFixed(1));
+  document.getElementById("ringPct").textContent = Math.round(pct*100)+"%";
+  document.getElementById("ringW").textContent = fmt(cur);
+  document.getElementById("st-ini").textContent = fmt(start);
+  document.getElementById("st-lost").textContent = (lost>=0?"":"")+fmt(lost);
+  document.getElementById("st-left").textContent = fmt(Math.max(0,left));
+  drawChart();
+}
+
+function drawChart(){
+  const box = document.getElementById("chartBox");
+  const ds = Object.keys(S.logs).filter(d=>S.logs[d].weight!=null).sort();
+  if(ds.length < 2){
+    box.innerHTML = '<div class="empty">Registra tu peso al menos 2 días para ver la curva.</div>';
+    document.getElementById("chartHint").textContent = ds.length+" registro"+(ds.length===1?"":"s");
+    return;
+  }
+  document.getElementById("chartHint").textContent = ds.length+" registros";
+  const vals = ds.map(d=>+S.logs[d].weight);
+  const goal = +S.profile.goalWeight;
+  let lo = Math.min(goal, ...vals), hi = Math.max(goal, ...vals);
+  const pad = Math.max(0.5,(hi-lo)*0.15); lo-=pad; hi+=pad;
+  const W=380,H=150,mL=6,mR=6,mT=10,mB=6;
+  const x = i => mL + (W-mL-mR)*(ds.length===1?0.5:i/(ds.length-1));
+  const y = v => mT + (H-mT-mB)*(1-(v-lo)/(hi-lo));
+  let path=""; ds.forEach((d,i)=>{ path += (i?"L":"M")+x(i).toFixed(1)+" "+y(vals[i]).toFixed(1)+" "; });
+  let area = path + "L"+x(ds.length-1).toFixed(1)+" "+(H-mB)+" L"+x(0).toFixed(1)+" "+(H-mB)+" Z";
+  const gy = y(goal).toFixed(1);
+  let dots=""; ds.forEach((d,i)=>{ dots+='<circle cx="'+x(i).toFixed(1)+'" cy="'+y(vals[i]).toFixed(1)+'" r="3.5" fill="var(--blue)" stroke="var(--card)" stroke-width="2"/>'; });
+  box.innerHTML =
+    '<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto;overflow:visible">'+
+    '<defs><linearGradient id="ag" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--blue)" stop-opacity=".22"/><stop offset="100%" stop-color="var(--blue)" stop-opacity="0"/></linearGradient></defs>'+
+    '<line x1="'+mL+'" y1="'+gy+'" x2="'+(W-mR)+'" y2="'+gy+'" stroke="var(--green)" stroke-width="1.5" stroke-dasharray="5 5"/>'+
+    '<text x="'+(W-mR)+'" y="'+(+gy-5)+'" text-anchor="end" font-size="11" font-weight="700" fill="var(--green)">objetivo '+fmt(goal)+'</text>'+
+    '<path d="'+area+'" fill="url(#ag)"/>'+
+    '<path d="'+path+'" fill="none" stroke="var(--blue)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>'+
+    dots+'</svg>';
+}
+
+function renderRacha(){
+  const st=S.streak;
+  document.getElementById("streakBig").textContent = st.current;
+  document.getElementById("record").textContent = st.record;
+  document.getElementById("freezes").textContent = st.freezes;
+  // calendario del mes
+  const now=new Date(), y=now.getFullYear(), m=now.getMonth();
+  const meses=["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+  document.getElementById("calTitle").textContent = meses[m].charAt(0).toUpperCase()+meses[m].slice(1);
+  document.getElementById("calHead").innerHTML = ["L","M","X","J","V","S","D"].map(d=>'<div class="calH">'+d+'</div>').join("");
+  const first=new Date(y,m,1); const startPad=(first.getDay()+6)%7; const dim=new Date(y,m+1,0).getDate();
+  let cells="";
+  for(let i=0;i<startPad;i++) cells+='<div class="calD blank"></div>';
+  for(let d=1; d<=dim; d++){
+    const ds=toStr(new Date(y,m,d));
+    const done=S.logs[ds]&&S.logs[ds].done;
+    const today=ds===todayStr();
+    cells+='<div class="calD'+(done?" done":"")+(today?" today":"")+'">'+d+'</div>';
+  }
+  document.getElementById("cal").innerHTML = cells;
+  let msg;
+  if(st.current===0) msg="Toca “Completar hoy” en la pestaña Hoy para encender tu racha. 🔥 Un día a la vez.";
+  else if(st.current<7) msg="¡Vas "+st.current+" día"+(st.current===1?"":"s")+"! La primera semana es la más difícil. No rompas la cadena.";
+  else if(st.current<30) msg="🔥 "+st.current+" días seguidos. Ya es un hábito. Tienes "+st.freezes+" escudo"+(st.freezes===1?"":"s")+" por si un día no puedes.";
+  else msg="🏆 "+st.current+" días. Esto ya eres tú. Increíble constancia.";
+  document.getElementById("rachaMsg").textContent = msg;
+}
+
+/* ---------- hoja de entrada numérica ---------- */
+let sheetCtx=null;
+const METRICS={
+  weight:{title:"Peso de hoy",unit:"kg",step:0.1,dec:1,def:()=>latestWeight()??+S.profile.startWeight},
+  water:{title:"Agua de hoy",unit:"L",step:0.25,dec:2,def:()=>2},
+  sleep:{title:"Horas de sueño",unit:"h",step:0.5,dec:1,def:()=>7},
+  steps:{title:"Pasos de hoy",unit:"",step:500,dec:0,def:()=>6000}
+};
+function editMetric(key){
+  const M=METRICS[key]; const L=log(todayStr());
+  const cur = L[key]!=null ? +L[key] : M.def();
+  sheetCtx={key,step:M.step,dec:M.dec};
+  document.getElementById("sheetTitle").textContent=M.title;
+  document.getElementById("sheetSub").textContent="Toca los botones o escribe el valor";
+  document.getElementById("stepUnit").textContent=M.unit;
+  const inp=document.getElementById("stepInput");
+  inp.step=M.step; inp.value = M.dec?cur.toFixed(M.dec).replace(/\.?0+$/,""):Math.round(cur);
+  openSheet();
+}
+function stepVal(dir){
+  const inp=document.getElementById("stepInput");
+  let v=parseFloat(inp.value)||0; v=Math.max(0, v+dir*sheetCtx.step);
+  inp.value = sheetCtx.dec? +v.toFixed(sheetCtx.dec) : Math.round(v);
+}
+function saveSheet(){
+  const v=parseFloat(document.getElementById("stepInput").value);
+  if(!isNaN(v)) { log(todayStr())[sheetCtx.key]=v; store.set("ap:logs",S.logs); }
+  closeSheet(); renderHoy();
+}
+function openSheet(){ document.getElementById("scrim").classList.add("show"); document.getElementById("sheet").classList.add("show"); }
+function closeSheet(){ document.getElementById("scrim").classList.remove("show"); document.getElementById("sheet").classList.remove("show"); }
+
+/* ---------- ajustes ---------- */
+function hydrateAjustes(){
+  document.getElementById("in-name").value=S.profile.name||"";
+  document.getElementById("in-start").value=S.profile.startWeight;
+  document.getElementById("in-goal").value=S.profile.goalWeight;
+}
+function saveProfileField(f,v){
+  if(f==="name") S.profile.name=v;
+  else{ const n=parseFloat(String(v).replace(",",".")); if(!isNaN(n)) S.profile[f]=n; }
+  store.set("ap:profile",S.profile); renderAll();
+}
+function resetAll(){
+  if(!confirm("¿Seguro? Se borrará tu racha, registros y ajustes. No se puede deshacer.")) return;
+  S={ profile:{name:"",startWeight:87,goalWeight:75,startDate:todayStr()}, logs:{}, streak:{current:0,record:0,lastDone:null,freezes:2} };
+  store.set("ap:profile",S.profile); store.set("ap:logs",S.logs); store.set("ap:streak",S.streak);
+  hydrateAjustes(); renderAll(); go("hoy"); toast("Datos borrados");
+}
+
+/* ---------- toast ---------- */
+let toastT=null;
+function toast(msg){
+  const el=document.getElementById("toast"); el.textContent=msg; el.classList.add("show");
+  clearTimeout(toastT); toastT=setTimeout(()=>el.classList.remove("show"),2200);
+}
+
+/* ---------- PWA: instalación y service worker ---------- */
+let deferredPrompt = null;
+const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+const isStandalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+
+window.addEventListener("beforeinstallprompt", (e)=>{
+  e.preventDefault(); deferredPrompt = e; updateInstallUI();
+});
+window.addEventListener("appinstalled", ()=>{
+  deferredPrompt = null; toast("¡App instalada! 🎉"); updateInstallUI();
+});
+
+async function installApp(){
+  if(deferredPrompt){
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if(outcome === "accepted") toast("Instalando…"); 
+    deferredPrompt = null; updateInstallUI(); return;
+  }
+  if(isIOS){
+    alert("Para instalar en iPhone/iPad:\n\n1. Toca el botón Compartir (cuadro con flecha ↑) en Safari.\n2. Elige “Añadir a inicio”.\n3. Toca “Añadir”.");
+    return;
+  }
+  toast("Abre el menú del navegador (⋮) y elige “Instalar app”.");
+}
+
+function updateInstallUI(){
+  const btn = document.getElementById("installBtn");
+  const hint = document.getElementById("installHint");
+  if(!btn) return;
+  if(isStandalone){
+    btn.style.display = "none";
+    hint.textContent = "✅ La app ya está instalada. ¡Ábrela desde tu pantalla de inicio!";
+    return;
+  }
+  if(isIOS){
+    hint.textContent = "En iPhone/iPad: toca Compartir ↑ en Safari y luego “Añadir a inicio”.";
+    btn.textContent = "Cómo instalar en iPhone";
+  } else if(deferredPrompt){
+    hint.textContent = "Instálala en tu pantalla de inicio para abrirla a pantalla completa, como una app nativa.";
+    btn.textContent = "Instalar app";
+  } else {
+    hint.textContent = "Instálala desde el menú del navegador (⋮ → “Instalar app”).";
+    btn.textContent = "Instalar app";
+  }
+}
+
+if("serviceWorker" in navigator){
+  window.addEventListener("load", ()=>{ navigator.serviceWorker.register("sw.js").catch(()=>{}); });
+}
+
+document.addEventListener("DOMContentLoaded", ()=>{ load(); updateInstallUI(); });
+</script>
+</body>
+</html>

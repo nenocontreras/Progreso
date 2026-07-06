@@ -1,0 +1,26 @@
+{
+  "name": "Mi Progreso — Fitness & Racha",
+  "short_name": "Mi Progreso",
+  "description": "Registra tu progreso físico, tus hábitos y mantén tu racha diaria estilo Duolingo. Funciona sin conexión.",
+  "start_url": "./?source=pwa",
+  "scope": "./",
+  "id": "/mi-progreso/",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui", "browser"],
+  "orientation": "portrait",
+  "background_color": "#F2F2F7",
+  "theme_color": "#0A84FF",
+  "lang": "es",
+  "dir": "ltr",
+  "categories": ["health", "fitness", "lifestyle"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "screenshots": [
+    { "src": "screenshots/screenshot-narrow.png", "sizes": "1080x1920", "type": "image/png", "form_factor": "narrow", "label": "Pantalla de inicio con la racha" },
+    { "src": "screenshots/screenshot-wide.png", "sizes": "1920x1080", "type": "image/png", "form_factor": "wide", "label": "Mi Progreso en escritorio" }
+  ]
+}
